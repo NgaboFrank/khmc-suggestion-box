@@ -12,29 +12,50 @@ export default function Admin() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [filter, setFilter] = useState<Filter>('All');
 
   async function load() {
-    const r = await fetch('/api/admin/suggestions', { cache: 'no-store' });
-    if (r.status === 401) { setLoggedIn(false); setLoading(false); return; }
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'Unable to load suggestions');
-    setItems(d.suggestions || []);
-    setLoggedIn(true);
-    setLoading(false);
+    setLoading(true);
+    setLoadError('');
+    try {
+      const r = await fetch('/api/admin/suggestions', { cache: 'no-store' });
+      const text = await r.text();
+      let d: any = {};
+      try { d = text ? JSON.parse(text) : {}; } catch { d = {}; }
+
+      if (r.status === 401) {
+        setLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+      if (!r.ok) throw new Error(d.error || `Unable to load suggestions (HTTP ${r.status})`);
+
+      setItems(Array.isArray(d.suggestions) ? d.suggestions : []);
+      setLoggedIn(true);
+    } catch (error) {
+      console.error('Admin load error:', error);
+      setLoadError(error instanceof Error ? error.message : 'Unable to load suggestions');
+      setLoggedIn(true);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => { load().catch(() => setLoading(false)); }, []);
+  useEffect(() => { load(); }, []);
 
   async function login(e: FormEvent) {
     e.preventDefault();
     setLoginError('');
-    const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
-    const d = await r.json();
-    if (!r.ok) { setLoginError(d.error || 'Login failed'); return; }
-    setPassword('');
-    setLoading(true);
-    await load();
+    try {
+      const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
+      const d = await r.json();
+      if (!r.ok) { setLoginError(d.error || 'Login failed'); return; }
+      setPassword('');
+      await load();
+    } catch (error) {
+      setLoginError(error instanceof Error ? error.message : 'Login failed');
+    }
   }
 
   async function updateStatus(id: string, status: string) {
@@ -86,7 +107,7 @@ export default function Admin() {
       {(['All', ...statuses] as Filter[]).map((s: Filter) => <button key={s} className={filter === s ? 'activeFilter' : ''} onClick={() => setFilter(s)}><strong>{counts[s]}</strong><span>{s}</span></button>)}
     </div>
     <section className="table">
-      {loading ? <p>Loading...</p> : filtered.length === 0 ? <div className="empty"><h2>No {filter === 'All' ? '' : filter.toLowerCase() + ' '}suggestions</h2><p>New messages will appear here when patients submit the form.</p></div> : filtered.map(x => <article className="item" key={x.id}>
+      {loading ? <p>Loading...</p> : loadError ? <div className="empty"><h2>Unable to load messages</h2><p>{loadError}</p><button onClick={load}>Try again</button></div> : filtered.length === 0 ? <div className="empty"><h2>No {filter === 'All' ? '' : filter.toLowerCase() + ' '}suggestions</h2><p>New messages will appear here when patients submit the form.</p></div> : filtered.map(x => <article className="item" key={x.id}>
         <div className="itemTop"><div className="meta"><b>{x.type || 'Suggestion'}</b><span>{x.department || 'General'}</span><small>{new Date(x.created_at).toLocaleString()}</small></div><select value={x.status || 'New'} onChange={e => updateStatus(x.id, e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div>
         <p className="message">{x.message}</p>
         <div className="itemBottom"><small>{x.anonymous ? 'Anonymous' : `${x.name || 'No name'}${x.phone ? ` · ${x.phone}` : ''}`}</small><button className="delete" onClick={() => remove(x.id)}>Delete</button></div>
