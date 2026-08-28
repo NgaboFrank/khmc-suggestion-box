@@ -16,102 +16,51 @@ export default function Admin() {
   const [filter, setFilter] = useState<Filter>('All');
 
   async function load() {
-    setLoading(true);
-    setLoadError('');
+    setLoading(true); setLoadError('');
     try {
-      const r = await fetch('/api/admin/suggestions', { cache: 'no-store' });
+      const r = await fetch('/api/admin/suggestions?ts=' + Date.now(), { cache: 'no-store' });
       const text = await r.text();
-      let d: any = {};
-      try { d = text ? JSON.parse(text) : {}; } catch { d = {}; }
-
-      if (r.status === 401) {
-        setLoggedIn(false);
-        setLoading(false);
-        return;
-      }
+      let d: any = {}; try { d = text ? JSON.parse(text) : {}; } catch {}
+      if (r.status === 401) { setLoggedIn(false); return; }
       if (!r.ok) throw new Error(d.error || `Unable to load suggestions (HTTP ${r.status})`);
-
-      setItems(Array.isArray(d.suggestions) ? d.suggestions : []);
-      setLoggedIn(true);
+      if (!Array.isArray(d.suggestions)) throw new Error('Invalid response from admin API');
+      setItems(d.suggestions); setLoggedIn(true);
     } catch (error) {
       console.error('Admin load error:', error);
       setLoadError(error instanceof Error ? error.message : 'Unable to load suggestions');
       setLoggedIn(true);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
   useEffect(() => { load(); }, []);
 
   async function login(e: FormEvent) {
-    e.preventDefault();
-    setLoginError('');
+    e.preventDefault(); setLoginError('');
     try {
       const r = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) });
       const d = await r.json();
       if (!r.ok) { setLoginError(d.error || 'Login failed'); return; }
-      setPassword('');
-      await load();
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : 'Login failed');
-    }
+      setPassword(''); await load();
+    } catch (error) { setLoginError(error instanceof Error ? error.message : 'Login failed'); }
   }
 
-  async function updateStatus(id: string, status: string) {
+  async function updateStatus(id: number, status: string) {
     const r = await fetch('/api/admin/suggestions', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, status }) });
     if (r.ok) setItems(prev => prev.map(x => x.id === id ? { ...x, status } : x));
   }
 
-  async function remove(id: string) {
+  async function remove(id: number) {
     if (!confirm('Delete this suggestion permanently?')) return;
     const r = await fetch('/api/admin/suggestions', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     if (r.ok) setItems(prev => prev.filter(x => x.id !== id));
   }
 
-  async function logout() {
-    await fetch('/api/admin/login', { method: 'DELETE' });
-    setLoggedIn(false);
-  }
+  async function logout() { await fetch('/api/admin/login', { method: 'DELETE' }); setLoggedIn(false); }
 
-  if (!loggedIn) return (
-    <main className="admin loginPage">
-      <div className="loginCard">
-        <div className="brand">KHMC</div>
-        <h1>Admin Dashboard</h1>
-        <p>Sign in to view and manage suggestion box messages.</p>
-        <form onSubmit={login} className="loginForm">
-          <label>Admin password<input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" required /></label>
-          {loginError && <div className="error">{loginError}</div>}
-          <button type="submit">Sign in</button>
-        </form>
-        <a href="/">Back to patient form</a>
-      </div>
-    </main>
-  );
+  if (!loggedIn) return <main className="admin loginPage"><div className="loginCard"><div className="brand">KHMC</div><h1>Admin Dashboard</h1><p>Sign in to view and manage suggestion box messages.</p><form onSubmit={login} className="loginForm"><label>Admin password<input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter password" required /></label>{loginError && <div className="error">{loginError}</div>}<button type="submit">Sign in</button></form><a href="/">Back to patient form</a></div></main>;
 
   const filtered = filter === 'All' ? items : items.filter(x => (x.status || 'New') === filter);
-  const counts: Record<Filter, number> = {
-    All: items.length,
-    New: items.filter(x => !x.status || x.status === 'New').length,
-    'In Review': items.filter(x => x.status === 'In Review').length,
-    Resolved: items.filter(x => x.status === 'Resolved').length,
-  };
+  const counts: Record<Filter, number> = { All: items.length, New: items.filter(x => !x.status || x.status === 'New').length, 'In Review': items.filter(x => x.status === 'In Review').length, Resolved: items.filter(x => x.status === 'Resolved').length };
 
-  return <main className="admin">
-    <div className="adminHead">
-      <div><div className="brand">KHMC</div><h1>Suggestion Box</h1><p>Review and manage feedback received from patients.</p></div>
-      <div className="adminActions"><a href="/">Patient Form</a><button className="logout" onClick={logout}>Sign out</button></div>
-    </div>
-    <div className="stats">
-      {(['All', ...statuses] as Filter[]).map((s: Filter) => <button key={s} className={filter === s ? 'activeFilter' : ''} onClick={() => setFilter(s)}><strong>{counts[s]}</strong><span>{s}</span></button>)}
-    </div>
-    <section className="table">
-      {loading ? <p>Loading...</p> : loadError ? <div className="empty"><h2>Unable to load messages</h2><p>{loadError}</p><button onClick={load}>Try again</button></div> : filtered.length === 0 ? <div className="empty"><h2>No {filter === 'All' ? '' : filter.toLowerCase() + ' '}suggestions</h2><p>New messages will appear here when patients submit the form.</p></div> : filtered.map(x => <article className="item" key={x.id}>
-        <div className="itemTop"><div className="meta"><b>{x.type || 'Suggestion'}</b><span>{x.department || 'General'}</span><small>{new Date(x.created_at).toLocaleString()}</small></div><select value={x.status || 'New'} onChange={e => updateStatus(x.id, e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div>
-        <p className="message">{x.message}</p>
-        <div className="itemBottom"><small>{x.anonymous ? 'Anonymous' : `${x.name || 'No name'}${x.phone ? ` · ${x.phone}` : ''}`}</small><button className="delete" onClick={() => remove(x.id)}>Delete</button></div>
-      </article>)}
-    </section>
-  </main>;
+  return <main className="admin"><div className="adminHead"><div><div className="brand">KHMC</div><h1>Suggestion Box</h1><p>Review and manage feedback received from patients.</p></div><div className="adminActions"><a href="/">Patient Form</a><button className="logout" onClick={logout}>Sign out</button></div></div><div className="stats">{(['All', ...statuses] as Filter[]).map(s => <button key={s} className={filter === s ? 'activeFilter' : ''} onClick={() => setFilter(s)}><strong>{counts[s]}</strong><span>{s}</span></button>)}</div><section className="table">{loading ? <p>Loading...</p> : loadError ? <div className="empty"><h2>Unable to load messages</h2><p>{loadError}</p><button onClick={load}>Try again</button></div> : filtered.length === 0 ? <div className="empty"><h2>No {filter === 'All' ? '' : filter.toLowerCase() + ' '}suggestions</h2><p>New messages will appear here when patients submit the form.</p><button onClick={load}>Refresh messages</button></div> : filtered.map(x => <article className="item" key={x.id}><div className="itemTop"><div className="meta"><b>{x.type || 'Suggestion'}</b><span>{x.department || 'General'}</span><small>{x.created_at ? new Date(x.created_at).toLocaleString() : ''}</small></div><select value={x.status || 'New'} onChange={e => updateStatus(x.id, e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div><p className="message">{x.message}</p><div className="itemBottom"><small>{x.anonymous ? 'Anonymous' : `${x.name || 'No name'}${x.phone ? ` · ${x.phone}` : ''}`}</small><button className="delete" onClick={() => remove(x.id)}>Delete</button></div></article>)}</section></main>;
 }
