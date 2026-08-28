@@ -9,16 +9,17 @@ export default function Home(){
   async function submit(e:React.FormEvent<HTMLFormElement>){
     e.preventDefault();
     setLoading(true);
+    const form=e.currentTarget;
     try{
-      const data=Object.fromEntries(new FormData(e.currentTarget).entries());
+      const data=Object.fromEntries(new FormData(form).entries());
       data.anonymous=anonymous?'true':'false';
       const r=await fetch('/api/suggestions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
       const text=await r.text();
       let result:any={};
       try{ result=text?JSON.parse(text):{} }catch{}
       if(r.ok){
+        form.reset();
         setSent(true);
-        e.currentTarget.reset();
       }else{
         console.error('Suggestion submission failed:',r.status,text);
         alert(result.error||`Unable to submit. Server returned ${r.status}.`);
