@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { COOKIE, sessionToken, validPassword } from '@/lib/admin-auth';
+import { COOKIE, sessionToken, validPassword } from '../../../../lib/admin-auth';
 
 export async function POST(request: Request) {
   try {
