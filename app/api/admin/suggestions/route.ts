@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { isAdmin } from '@/lib/admin-auth';
+import { isAdmin } from '../../../../lib/admin-auth';
 
 function db() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
