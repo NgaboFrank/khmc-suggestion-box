@@ -9,7 +9,9 @@ function token(secret: string) {
 
 export function sessionToken() {
   const password = process.env.ADMIN_PASSWORD;
-  const secret = process.env.ADMIN_SESSION_SECRET;
+  // ADMIN_SESSION_SECRET is optional. If it has not been added to Vercel yet,
+  // use the admin password as the signing secret so the dashboard still works.
+  const secret = process.env.ADMIN_SESSION_SECRET || password;
   if (!password || !secret) return null;
   return token(`${password}:${secret}`);
 }
