@@ -9,7 +9,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please complete all required fields.' }, { status: 400 });
     }
 
-    const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').replace(/\/$/, '');
+    // Prefer the same Supabase URL configured for the browser/project.
+    const url = (process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || '').replace(/\/$/, '');
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 
     if (!url || !key) {
