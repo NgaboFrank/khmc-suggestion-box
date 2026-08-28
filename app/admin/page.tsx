@@ -2,7 +2,9 @@
 
 import { FormEvent, useEffect, useState } from 'react';
 
-const statuses = ['New', 'In Review', 'Resolved'];
+const statuses = ['New', 'In Review', 'Resolved'] as const;
+type Status = (typeof statuses)[number];
+type Filter = 'All' | Status;
 
 export default function Admin() {
   const [items, setItems] = useState<any[]>([]);
@@ -10,7 +12,7 @@ export default function Admin() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [filter, setFilter] = useState('All');
+  const [filter, setFilter] = useState<Filter>('All');
 
   async function load() {
     const r = await fetch('/api/admin/suggestions', { cache: 'no-store' });
@@ -68,14 +70,21 @@ export default function Admin() {
   );
 
   const filtered = filter === 'All' ? items : items.filter(x => (x.status || 'New') === filter);
-  const counts = { All: items.length, New: items.filter(x => !x.status || x.status === 'New').length, 'In Review': items.filter(x => x.status === 'In Review').length, Resolved: items.filter(x => x.status === 'Resolved').length };
+  const counts: Record<Filter, number> = {
+    All: items.length,
+    New: items.filter(x => !x.status || x.status === 'New').length,
+    'In Review': items.filter(x => x.status === 'In Review').length,
+    Resolved: items.filter(x => x.status === 'Resolved').length,
+  };
 
   return <main className="admin">
     <div className="adminHead">
       <div><div className="brand">KHMC</div><h1>Suggestion Box</h1><p>Review and manage feedback received from patients.</p></div>
       <div className="adminActions"><a href="/">Patient Form</a><button className="logout" onClick={logout}>Sign out</button></div>
     </div>
-    <div className="stats">{(['All', ...statuses] as const).map(s => <button key={s} className={filter === s ? 'activeFilter' : ''} onClick={() => setFilter(s)}><strong>{counts[s]}</strong><span>{s}</span></button>)}</div>
+    <div className="stats">
+      {(['All', ...statuses] as Filter[]).map((s: Filter) => <button key={s} className={filter === s ? 'activeFilter' : ''} onClick={() => setFilter(s)}><strong>{counts[s]}</strong><span>{s}</span></button>)}
+    </div>
     <section className="table">
       {loading ? <p>Loading...</p> : filtered.length === 0 ? <div className="empty"><h2>No {filter === 'All' ? '' : filter.toLowerCase() + ' '}suggestions</h2><p>New messages will appear here when patients submit the form.</p></div> : filtered.map(x => <article className="item" key={x.id}>
         <div className="itemTop"><div className="meta"><b>{x.type || 'Suggestion'}</b><span>{x.department || 'General'}</span><small>{new Date(x.created_at).toLocaleString()}</small></div><select value={x.status || 'New'} onChange={e => updateStatus(x.id, e.target.value)}>{statuses.map(s => <option key={s}>{s}</option>)}</select></div>
