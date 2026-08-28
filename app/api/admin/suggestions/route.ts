@@ -1,0 +1,2 @@
+import {NextResponse} from 'next/server';import {createClient} from '@supabase/supabase-js';
+export async function GET(){try{const s=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!);const{data,error}=await s.from('suggestions').select('*').order('created_at',{ascending:false});if(error)throw error;return NextResponse.json({suggestions:data})}catch{return NextResponse.json({error:'Unable to load suggestions'},{status:500})}}
