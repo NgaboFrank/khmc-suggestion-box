@@ -55,7 +55,7 @@ export async function currentAdmin() {
   try {
     const { data } = await adminDb()
       .from('admin_users')
-      .select('id,email,name,password_hash');
+      .select('id,email,name,password_hash,is_owner');
 
     return (data || []).find((a: any) => {
       const expected = sessionToken(a.email, a.password_hash);
