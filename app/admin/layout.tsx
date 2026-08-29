@@ -2,7 +2,7 @@ import { currentAdmin } from '../../lib/admin-auth';
 import AdminManagement from '../../components/AdminManagement';
 
 // There is exactly one owner account. Admin Management must never be shown
-a normal administrator, even if their database role is misconfigured.
+to a normal administrator, even if their database role is misconfigured.
 const OWNER_EMAIL = 'admin@khmc.com';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
