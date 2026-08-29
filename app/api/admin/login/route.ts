@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const supabase = adminDb();
     let { data: admins, error } = await supabase
       .from('admin_users')
-      .select('id,email,name,password_hash')
+      .select('id,email,name,password_hash,is_active')
       .eq('email', wanted)
       .limit(1);
 
@@ -23,34 +23,17 @@ export async function POST(request: Request) {
     }
 
     if ((!admins || admins.length === 0) && process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && wanted === process.env.ADMIN_EMAIL.trim().toLowerCase() && password === process.env.ADMIN_PASSWORD) {
-      const created = await supabase
-        .from('admin_users')
-        .insert({
-          email: wanted,
-          name: 'Administrator',
-          password_hash: hashPassword(password),
-        })
-        .select('id,email,name,password_hash')
-        .single();
+      const created = await supabase.from('admin_users').insert({ email: wanted, name: 'Administrator', password_hash: hashPassword(password), is_active: true }).select('id,email,name,password_hash,is_active').single();
       if (!created.error && created.data) admins = [created.data];
     }
 
-    const admin = (admins || [])[0] as { id:any; email:string; name:string; password_hash:string } | undefined;
-    if (!admin || !verifyPassword(password, admin.password_hash)) {
-      return NextResponse.json({ error: 'Incorrect email or password' }, { status: 401 });
-    }
+    const admin = (admins || [])[0] as { id:any; email:string; name:string; password_hash:string; is_active?:boolean } | undefined;
+    if (!admin || admin.is_active === false || !verifyPassword(password, admin.password_hash)) return NextResponse.json({ error: 'Incorrect email or password' }, { status: 401 });
 
     const token = sessionToken(admin.email, admin.password_hash);
     if (!token) return NextResponse.json({ error: 'Admin session is not configured' }, { status: 500 });
-
     const response = NextResponse.json({ ok: true, name: admin.name });
-    response.cookies.set(COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 8,
-    });
+    response.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Invalid request' }, { status: 400 });
