@@ -3,7 +3,7 @@ import AdminManagement from '../../components/AdminManagement';
 
 // There is exactly one owner account.
 // Admin Management must never be shown to a normal administrator.
-const OWNER_EMAIL = 'admin@khmc.com';
+const OWNER_EMAIL = 'franckngabo70@gmail.com';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const admin = await currentAdmin();
