@@ -29,7 +29,6 @@ export async function POST(request: Request) {
     const existing = await db.from('admin_users').select('id').eq('email', cleanEmail).maybeSingle();
     if (existing.error) return NextResponse.json({ error: existing.error.message }, { status: 500 });
     if (existing.data) return NextResponse.json({ error: 'An admin with this email already exists' }, { status: 409 });
-
     const base = (cleanEmail.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 24) || 'admin');
     let username = base;
     for (let n = 2; n <= 100; n++) {
@@ -38,15 +37,7 @@ export async function POST(request: Request) {
       if (!taken.data) break;
       username = `${base}${n}`;
     }
-
-    const { data, error } = await db.from('admin_users').insert({
-      email: cleanEmail,
-      name: cleanName,
-      username,
-      password_hash: hashPassword(cleanPassword),
-      is_active: true,
-      is_owner: false,
-    }).select('id,email,name,username,is_active,is_owner,created_at').single();
+    const { data, error } = await db.from('admin_users').insert({ email: cleanEmail, name: cleanName, username, password_hash: hashPassword(cleanPassword), is_active: true, is_owner: false }).select('id,email,name,username,is_active,is_owner,created_at').single();
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });
     return NextResponse.json({ admin: data }, { status: 201 });
   } catch (error:any) { return NextResponse.json({ error: error?.message || 'Invalid request' }, { status: 400 }); }
