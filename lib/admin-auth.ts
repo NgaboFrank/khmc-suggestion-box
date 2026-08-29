@@ -29,13 +29,13 @@ export async function isAdmin() {
   const legacy = legacySessionToken();
   if (legacy && value === legacy) return true;
   try {
-    const { data } = await adminDb().from('admin_users').select('username,password_hash,active').eq('active', true);
+    const { data } = await adminDb().from('admin_users').select('username,password_hash,is_active').eq('is_active', true);
     return (data || []).some((a: any) => { const expected = sessionToken(a.username, a.password_hash); if (!expected) return false; const x=Buffer.from(value), y=Buffer.from(expected); return x.length===y.length && timingSafeEqual(x,y); });
   } catch { return false; }
 }
 export async function currentAdmin() {
   const value = (await cookies()).get(COOKIE)?.value || '';
   if (!value) return null;
-  try { const { data } = await adminDb().from('admin_users').select('id,username,name,active,password_hash').eq('active', true); return (data || []).find((a:any)=>{const expected=sessionToken(a.username,a.password_hash);if(!expected)return false;const x=Buffer.from(value),y=Buffer.from(expected);return x.length===y.length&&timingSafeEqual(x,y)}) || null; } catch { return null; }
+  try { const { data } = await adminDb().from('admin_users').select('id,username,name,is_active,password_hash').eq('is_active', true); return (data || []).find((a:any)=>{const expected=sessionToken(a.username,a.password_hash);if(!expected)return false;const x=Buffer.from(value),y=Buffer.from(expected);return x.length===y.length&&timingSafeEqual(x,y)}) || null; } catch { return null; }
 }
 export { SESSION_HOURS };
