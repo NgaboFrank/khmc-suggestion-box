@@ -3,6 +3,8 @@ import { adminDb } from '../../../../lib/admin-db';
 import { hashPassword, verifyPassword } from '../../../../lib/admin-password';
 import { COOKIE, sessionToken } from '../../../../lib/admin-auth';
 
+const AUTH_STATE_COOKIE = 'khmc_admin_auth_state';
+
 export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
@@ -34,6 +36,7 @@ export async function POST(request: Request) {
     if (!token) return NextResponse.json({ error: 'Admin session is not configured' }, { status: 500 });
     const response = NextResponse.json({ ok: true, name: admin.name });
     response.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
+    response.cookies.set(AUTH_STATE_COOKIE, '1', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Invalid request' }, { status: 400 });
@@ -43,5 +46,6 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
+  response.cookies.set(AUTH_STATE_COOKIE, '', { httpOnly: false, path: '/', maxAge: 0 });
   return response;
 }
