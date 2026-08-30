@@ -1,5 +1,6 @@
 import { currentAdmin } from '../../lib/admin-auth';
 import AdminManagement from '../../components/AdminManagement';
+import AdminSessionRefresh from '../../components/AdminSessionRefresh';
 
 // There is exactly one owner account.
 // Admin Management must never be shown to a normal administrator.
@@ -11,6 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <>
+      <AdminSessionRefresh />
       {children}
       <a className="adminForgotPassword" href="/admin/forgot-password">Forgot password?</a>
       {isOwner ? <AdminManagement /> : null}
