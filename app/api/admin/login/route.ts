@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true, name: admin.name });
     response.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     response.cookies.set(AUTH_STATE_COOKIE, '1', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
-    response.cookies.set(ADMIN_NAME_COOKIE, encodeURIComponent(admin.name), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
+    response.cookies.set(ADMIN_NAME_COOKIE, admin.name, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Invalid request' }, { status: 400 });
