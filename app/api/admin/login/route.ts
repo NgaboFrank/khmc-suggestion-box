@@ -4,6 +4,7 @@ import { hashPassword, verifyPassword } from '../../../../lib/admin-password';
 import { COOKIE, sessionToken } from '../../../../lib/admin-auth';
 
 const AUTH_STATE_COOKIE = 'khmc_admin_auth_state';
+const ADMIN_NAME_COOKIE = 'khmc_admin_name';
 
 export async function POST(request: Request) {
   try {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
     const response = NextResponse.json({ ok: true, name: admin.name });
     response.cookies.set(COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     response.cookies.set(AUTH_STATE_COOKIE, '1', { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
+    response.cookies.set(ADMIN_NAME_COOKIE, encodeURIComponent(admin.name), { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/', maxAge: 60 * 60 * 8 });
     return response;
   } catch (error: any) {
     return NextResponse.json({ error: error?.message || 'Invalid request' }, { status: 400 });
@@ -47,5 +49,6 @@ export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.set(COOKIE, '', { httpOnly: true, path: '/', maxAge: 0 });
   response.cookies.set(AUTH_STATE_COOKIE, '', { httpOnly: false, path: '/', maxAge: 0 });
+  response.cookies.set(ADMIN_NAME_COOKIE, '', { httpOnly: false, path: '/', maxAge: 0 });
   return response;
 }
